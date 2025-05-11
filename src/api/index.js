@@ -7,8 +7,8 @@ import { graphqlRequest } from '../utils/http';
 // API 配置
 const API_CONFIG = {
   // GraphQL API 端点
-  // GRAPHQL_URL: 'http://api.skerd.cn/graphql',
-  GRAPHQL_URL: 'http://localhost:8787/graphql',
+  GRAPHQL_URL: 'http://api.skerd.cn/graphql',
+  // GRAPHQL_URL: 'http://localhost:8787/graphql',
 
   // 可以在这里添加其他 API 配置，如鉴权令牌等
 };
