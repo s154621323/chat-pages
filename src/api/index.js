@@ -54,10 +54,13 @@ const QUERIES = {
  * @returns {Promise<Object>} - AI 回复内容
  */
 export const sendMessageToAI = async (message, systemPrompt) => {
+  // 为了获得更好的 Markdown 格式内容，添加提示鼓励 AI 使用 Markdown
+  const enhancedSystemPrompt = systemPrompt || "你是一个有用的AI助手。回复时尽量使用Markdown格式，可以使用标题、列表、代码块、表格等Markdown元素使回复更易读。代码要用 ```语言名 包裹。";
+
   // 发送 GraphQL 请求
   const variables = {
     message,
-    systemPrompt: systemPrompt || undefined
+    systemPrompt: enhancedSystemPrompt
   };
 
   // 使用 http 模块发送请求

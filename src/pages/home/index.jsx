@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendMessageToAI } from '../../api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeHighlight from 'rehype-highlight/lib';
+import 'highlight.js/styles/github.css';
 import './index.css';
 
 const Home = () => {
@@ -73,6 +78,54 @@ const Home = () => {
     }
   };
 
+  // 渲染消息内容，支持 Markdown
+  const renderMessageContent = (text, isUser) => {
+    if (isUser) {
+      // 用户消息不使用 Markdown 渲染
+      return <div className="message-text">{text}</div>;
+    }
+    
+    // AI 消息使用 Markdown 渲染
+    return (
+      <div className="markdown-content">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          components={{
+            // 自定义链接在新标签页打开
+            a: ({ node, ...props }) => (
+              <a target="_blank" rel="noopener noreferrer" {...props} />
+            ),
+            // 让图片响应式显示
+            img: ({ node, ...props }) => (
+              <img style={{ maxWidth: '100%' }} {...props} alt={props.alt || ''} />
+            ),
+            // 为代码块添加样式
+            code: ({ node, inline, className, children, ...props }) => {
+              const match = /language-(\w+)/.exec(className || '');
+              return !inline && match ? (
+                <div className="code-block-wrapper">
+                  <div className="code-block-header">
+                    <span>{match[1]}</span>
+                  </div>
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                </div>
+              ) : (
+                <code className={inline ? 'inline-code' : ''} {...props}>
+                  {children}
+                </code>
+              );
+            }
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -86,7 +139,7 @@ const Home = () => {
             className={`message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
           >
             <div className="message-bubble">
-              {message.text}
+              {renderMessageContent(message.text, message.sender === 'user')}
             </div>
           </div>
         ))}
