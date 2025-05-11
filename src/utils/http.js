@@ -17,6 +17,7 @@ export const request = async (url, options = {}) => {
       headers: {
         'Content-Type': 'application/json',
       },
+      mode: 'cors',
     };
 
     // 合并选项

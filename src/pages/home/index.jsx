@@ -56,7 +56,9 @@ const Home = () => {
       ]);
       
       // 创建 EventSource
-      const eventSource = new EventSource(streamUrl);
+      const eventSource = new EventSource(streamUrl, { 
+        withCredentials: false 
+      });
       eventSourceRef.current = eventSource;
       
       // 处理开始事件
