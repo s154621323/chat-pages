@@ -7,7 +7,7 @@ import { graphqlRequest } from '../utils/http';
 // API 配置
 const API_CONFIG = {
   // GraphQL API 端点
-  GRAPHQL_URL: 'https://chat-workers.edensun0609.workers.dev/graphql',
+  GRAPHQL_URL: 'http://api.skerd.cn/graphql',
 
   // 可以在这里添加其他 API 配置，如鉴权令牌等
 };
