@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { sendMessageToAI } from '../../api';
 import './index.css';
 
 const Home = () => {
@@ -18,33 +19,39 @@ const Home = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 模拟AI回复
-  const simulateAIResponse = (userMessage) => {
+  // 调用 API 获取回复
+  const fetchAIResponse = async (userMessage) => {
     setIsLoading(true);
     
-    // 模拟API调用延迟
-    setTimeout(() => {
-      const aiResponses = [
-        '我理解你的问题，让我思考一下...',
-        '这是个有趣的问题！',
-        '根据我的理解，这个问题的答案是...',
-        '我可以帮你解决这个问题。',
-        '需要更多信息才能回答这个问题。'
-      ];
+    try {
+      // 调用API模块发送消息
+      const response = await sendMessageToAI(userMessage);
       
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+      // 从响应中提取 AI 回复内容
+      const aiResponseText = response.choices[0].message.content;
       
       setMessages(prev => [
         ...prev, 
         { 
           id: prev.length + 2, 
-          text: randomResponse, 
+          text: aiResponseText, 
           sender: 'ai' 
         }
       ]);
-      
+    } catch (error) {
+      console.error('获取 AI 回复失败:', error);
+      // 显示错误消息
+      setMessages(prev => [
+        ...prev, 
+        { 
+          id: prev.length + 2, 
+          text: `请求失败：${error.message}`, 
+          sender: 'ai' 
+        }
+      ]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSendMessage = () => {
@@ -56,7 +63,7 @@ const Home = () => {
     setInputText('');
     
     // 获取AI回复
-    simulateAIResponse(inputText);
+    fetchAIResponse(inputText);
   };
 
   const handleKeyPress = (e) => {

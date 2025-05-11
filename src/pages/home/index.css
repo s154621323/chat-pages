@@ -123,6 +123,8 @@ textarea {
   outline: none;
   max-height: 100px;
   transition: border-color 0.2s;
+  font-family: inherit;
+  overflow: hidden;
 }
 
 textarea:focus {

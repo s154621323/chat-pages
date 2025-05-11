@@ -1,0 +1,91 @@
+/**
+ * API 模块
+ * 定义所有后端接口的地址和调用方法
+ */
+import { graphqlRequest } from '../utils/http';
+
+// API 配置
+const API_CONFIG = {
+  // GraphQL API 端点
+  GRAPHQL_URL: 'http://localhost:8787/graphql',
+
+  // 可以在这里添加其他 API 配置，如鉴权令牌等
+};
+
+// GraphQL 查询定义
+const QUERIES = {
+  // 欢迎消息查询
+  HELLO: `
+    query {
+      hello
+    }
+  `,
+
+  // 聊天消息变更
+  CHAT: `
+    mutation Chat($message: String!, $systemPrompt: String) {
+      chat(
+        message: $message,
+        systemPrompt: $systemPrompt
+      ) {
+        id
+        choices {
+          index
+          message {
+            role
+            content
+          }
+          finish_reason
+        }
+        usage {
+          prompt_tokens
+          completion_tokens
+          total_tokens
+        }
+      }
+    }
+  `,
+};
+
+/**
+ * 向 AI 发送消息并获取回复
+ * @param {string} message - 用户消息
+ * @param {string} systemPrompt - 可选的系统提示
+ * @returns {Promise<Object>} - AI 回复内容
+ */
+export const sendMessageToAI = async (message, systemPrompt) => {
+  // 发送 GraphQL 请求
+  const variables = {
+    message,
+    systemPrompt: systemPrompt || undefined
+  };
+
+  // 使用 http 模块发送请求
+  const result = await graphqlRequest(
+    API_CONFIG.GRAPHQL_URL,
+    QUERIES.CHAT,
+    variables
+  );
+
+  return result.chat;
+};
+
+/**
+ * 获取 GraphQL API 的欢迎消息
+ * @returns {Promise<string>} - 欢迎消息
+ */
+export const getHelloMessage = async () => {
+  // 使用 http 模块发送请求
+  const result = await graphqlRequest(
+    API_CONFIG.GRAPHQL_URL,
+    QUERIES.HELLO
+  );
+
+  return result.hello;
+};
+
+// 导出默认对象，包含所有 API 方法
+export default {
+  sendMessageToAI,
+  getHelloMessage
+}; 
