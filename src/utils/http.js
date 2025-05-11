@@ -101,10 +101,13 @@ export const post = (url, data, options = {}) => {
   });
 };
 
-// 导出默认对象
-export default {
+// 定义HTTP对象
+const HTTP = {
   request,
   graphqlRequest,
   get,
   post,
-}; 
+};
+
+// 导出默认对象
+export default HTTP; 
