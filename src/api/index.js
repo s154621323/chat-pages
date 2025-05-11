@@ -124,9 +124,12 @@ export const getStreamUrl = async (message, systemPrompt) => {
   return result.chatStream;
 };
 
-// 导出默认对象，包含所有 API 方法
-export default {
+// 定义API对象
+const API = {
   sendMessageToAI,
   getHelloMessage,
   getStreamUrl
-}; 
+};
+
+// 导出默认对象
+export default API; 

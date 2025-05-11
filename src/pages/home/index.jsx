@@ -182,8 +182,10 @@ const Home = () => {
           rehypePlugins={[rehypeRaw]}
           components={{
             // 自定义链接在新标签页打开
-            a: ({ node, ...props }) => (
-              <a target="_blank" rel="noopener noreferrer" {...props} />
+            a: ({ node, children, ...props }) => (
+              <a target="_blank" rel="noopener noreferrer" {...props}>
+                {children}
+              </a>
             ),
             // 让图片响应式显示
             img: ({ node, ...props }) => (
