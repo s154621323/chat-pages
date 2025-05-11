@@ -304,4 +304,17 @@ body {
 /* 确保用户消息中的文本正常显示 */
 .message-text {
   white-space: pre-wrap;
+}
+
+/* 光标闪烁动画 */
+.cursor-blink {
+  display: inline-block;
+  margin-left: 1px;
+  animation: blink 0.8s infinite;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 } 

@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendMessageToAI } from '../../api';
+import { getStreamUrl } from '../../api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import rehypeHighlight from 'rehype-highlight/lib';
 import 'highlight.js/styles/github.css';
 import './index.css';
 
@@ -14,6 +13,7 @@ const Home = () => {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const eventSourceRef = useRef(null); // 存储 EventSource 实例
 
   // 自动滚动到最新消息
   const scrollToBottom = () => {
@@ -24,43 +24,132 @@ const Home = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 调用 API 获取回复
-  const fetchAIResponse = async (userMessage) => {
+  // 组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      // 清除所有事件源
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, []);
+
+  // 使用流式输出获取回复
+  const fetchStreamAIResponse = async (userMessage) => {
     setIsLoading(true);
     
     try {
-      // 调用API模块发送消息
-      const response = await sendMessageToAI(userMessage);
+      // 获取流式输出 URL
+      const streamUrl = await getStreamUrl(userMessage);
       
-      // 从响应中提取 AI 回复内容
-      const aiResponseText = response.choices[0].message.content;
-      
+      // 先添加一个空的回复，后续流式更新
+      const newMessageId = messages.length + 2;
       setMessages(prev => [
         ...prev, 
         { 
-          id: prev.length + 2, 
-          text: aiResponseText, 
-          sender: 'ai' 
+          id: newMessageId, 
+          text: '', 
+          sender: 'ai',
+          isStreaming: true // 标记为正在流式输出
         }
       ]);
+      
+      // 创建 EventSource
+      const eventSource = new EventSource(streamUrl);
+      eventSourceRef.current = eventSource;
+      
+      // 处理开始事件
+      eventSource.addEventListener('start', (event) => {
+        console.log('Stream started:', event.data);
+      });
+      
+      // 处理消息事件
+      eventSource.addEventListener('message', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setMessages(prev => {
+            // 找到正在流式输出的消息
+            return prev.map(msg => {
+              if (msg.id === newMessageId) {
+                // 追加内容
+                return { 
+                  ...msg, 
+                  text: msg.text + (data.content || '') 
+                };
+              }
+              return msg;
+            });
+          });
+        } catch (error) {
+          console.error('解析消息错误:', error);
+        }
+      });
+      
+      // 处理完成事件
+      eventSource.addEventListener('done', () => {
+        console.log('Stream completed');
+        // 更新消息，移除 isStreaming 标记
+        setMessages(prev => {
+          return prev.map(msg => {
+            if (msg.id === newMessageId) {
+              const { isStreaming, ...restMsg } = msg;
+              return restMsg;
+            }
+            return msg;
+          });
+        });
+        // 关闭 EventSource
+        eventSource.close();
+        eventSourceRef.current = null;
+        setIsLoading(false);
+      });
+      
+      // 处理错误事件
+      eventSource.addEventListener('error', (event) => {
+        console.error('Stream error:', event);
+        // 更新消息，添加错误提示
+        setMessages(prev => {
+          return prev.map(msg => {
+            if (msg.id === newMessageId && msg.isStreaming) {
+              const { isStreaming, ...restMsg } = msg;
+              return { 
+                ...restMsg, 
+                text: msg.text || '流式响应出错，请重试' 
+              };
+            }
+            return msg;
+          });
+        });
+        // 关闭 EventSource
+        eventSource.close();
+        eventSourceRef.current = null;
+        setIsLoading(false);
+      });
+      
     } catch (error) {
-      console.error('获取 AI 回复失败:', error);
+      console.error('获取流式响应失败:', error);
       // 显示错误消息
       setMessages(prev => [
         ...prev, 
         { 
-          id: prev.length + 2, 
+          id: messages.length + 2, 
           text: `请求失败：${error.message}`, 
           sender: 'ai' 
         }
       ]);
-    } finally {
       setIsLoading(false);
     }
   };
 
   const handleSendMessage = () => {
-    if (inputText.trim() === '') return;
+    if (inputText.trim() === '' || isLoading) return;
+    
+    // 如果有正在进行的流式响应，先关闭它
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
     
     // 添加用户消息
     const userMessage = { id: messages.length + 1, text: inputText, sender: 'user' };
@@ -68,7 +157,7 @@ const Home = () => {
     setInputText('');
     
     // 获取AI回复
-    fetchAIResponse(inputText);
+    fetchStreamAIResponse(inputText);
   };
 
   const handleKeyPress = (e) => {
@@ -90,7 +179,7 @@ const Home = () => {
       <div className="markdown-content">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw, rehypeHighlight]}
+          rehypePlugins={[rehypeRaw]}
           components={{
             // 自定义链接在新标签页打开
             a: ({ node, ...props }) => (
@@ -140,10 +229,13 @@ const Home = () => {
           >
             <div className="message-bubble">
               {renderMessageContent(message.text, message.sender === 'user')}
+              {message.isStreaming && (
+                <span className="cursor-blink">|</span>
+              )}
             </div>
           </div>
         ))}
-        {isLoading && (
+        {isLoading && !messages.find(m => m.isStreaming) && (
           <div className="message ai-message">
             <div className="message-bubble loading">
               <span>.</span><span>.</span><span>.</span>
@@ -160,6 +252,7 @@ const Home = () => {
           onKeyPress={handleKeyPress}
           placeholder="输入消息..."
           rows={1}
+          disabled={isLoading}
         />
         <button 
           onClick={handleSendMessage}
